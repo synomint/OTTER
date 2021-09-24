@@ -58,6 +58,11 @@ glm::ivec2 windowSize = glm::ivec2(800, 800);
 // The title of our GLFW window
 std::string windowTitle = "INFR-1350U";
 
+void GlfwWindowResizedCallback(GLFWwindow* window, int width, int height) {
+	glViewport(0, 0, width, height);
+	windowSize = glm::ivec2(width, height);
+}
+
 /// <summary>
 /// Handles intializing GLFW, should be called before initGLAD, but after Logger::Init()
 /// Also handles creating the GLFW window
@@ -73,6 +78,9 @@ bool initGLFW() {
 	//Create a new GLFW window and make it current
 	window = glfwCreateWindow(windowSize.x, windowSize.y, windowTitle.c_str(), nullptr, nullptr);
 	glfwMakeContextCurrent(window);
+
+	// Set our window resized callback
+	glfwSetWindowSizeCallback(window, GlfwWindowResizedCallback);
 
 	return true;
 }
@@ -167,31 +175,50 @@ int main() {
 	};
 
 	//VBO - Vertex buffer object
-	GLuint pos_vbo = 0;
-	glGenBuffers(1, &pos_vbo);
-	glBindBuffer(GL_ARRAY_BUFFER, pos_vbo);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(points), points, GL_STATIC_DRAW);
+	VertexBuffer* posVbo = new VertexBuffer();
+	posVbo->LoadData(points, 9);
+	VertexBuffer* color_vbo = new VertexBuffer();
+	color_vbo->LoadData(colors, 9);
 
-	GLuint color_vbo = 1;
-	glGenBuffers(1, &color_vbo);
-	glBindBuffer(GL_ARRAY_BUFFER, color_vbo);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(colors), colors, GL_STATIC_DRAW);
+	VertexArrayObject* vao = new VertexArrayObject();
+	vao->AddVertexBuffer(posVbo, {
+	 { 0, 3, AttributeType::Float, 0, NULL }
+		});
+	vao->AddVertexBuffer(color_vbo, {
+	 { 1, 3, AttributeType::Float, 0, NULL }
+		});
 
-	glBindBuffer(GL_ARRAY_BUFFER, pos_vbo);
+	static const float interleaved[] = {
+		// X Y Z R G B
+		 0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 0.0f,
+		 0.5f, 0.5f, 0.5f, 0.3f, 0.2f, 0.5f,
+		 -0.5f, 0.5f, 0.5f, 1.0f, 1.0f, 0.0f,
+		 -0.5f, -0.5f, 0.5f, 1.0f, 1.0f, 1.0f
+	};
+	VertexBuffer* interleaved_vbo = new VertexBuffer();
+	interleaved_vbo->LoadData(interleaved, 6 * 4);
 
-	//						index, size, type, normalize?, stride, pointer
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+	static const uint16_t indices[] = {
+		3, 0, 1,
+		3, 1, 2
+	};
+	IndexBuffer* interleaved_ibo = new IndexBuffer();
+	interleaved_ibo->LoadData(indices, 3 * 2);
 
-	glBindBuffer(GL_ARRAY_BUFFER, color_vbo);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-
-	glEnableVertexAttribArray(0);//pos
-	glEnableVertexAttribArray(1);//colors
+	size_t stride = sizeof(float) * 6;
+	VertexArrayObject* vao2 = new VertexArrayObject();
+	vao2->AddVertexBuffer(interleaved_vbo, {
+	BufferAttribute(0, 3, AttributeType::Float, stride, 0),
+	BufferAttribute(1, 3, AttributeType::Float, stride, sizeof(float) * 3),
+		});
+	vao2->SetIndexBuffer(interleaved_ibo);
 
 	// Load our shaders
 
-	if (!loadShaders())
-		return 1;
+	Shader* shader = new Shader();
+	shader->LoadShaderPartFromFile("shaders/vertex_shader.glsl", ShaderPartType::Vertex);
+	shader->LoadShaderPartFromFile("shaders/frag_shader.glsl", ShaderPartType::Fragment);
+	shader->Link();
 
 	// GL states
 	glEnable(GL_DEPTH_TEST);
@@ -212,14 +239,23 @@ int main() {
 		glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		glUseProgram(shader_program);
-
+		shader->Bind();
+		vao->Bind();
 		glDrawArrays(GL_TRIANGLES, 0, 3);
+
+		vao2->Bind();
+		glDrawElements(GL_TRIANGLES, (GLenum)interleaved_ibo->GetElementCount(), (GLenum)interleaved_ibo->GetElementType(), nullptr);
+		VertexArrayObject::Unbind();
 
 		glfwSwapBuffers(window);
 	}
 
 	// Clean up the toolkit logger so we don't leak memory
+	delete shader;
+	delete vao;
+	delete posVbo;
+	delete color_vbo;
+	
 	Logger::Uninitialize();
 	return 0;
 }
