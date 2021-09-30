@@ -164,14 +164,14 @@ int main() {
 
 	static const GLfloat points[] = {
 		-0.5f, -0.5f, 0.5f,
-		0.5f, -0.5f, 0.5f,
-		-0.5f, 0.5f, 0.5f
+		0.0f, 0.5f, 0.5f,
+		0.5f, -0.5f, 0.5f
 	};
 
 	static const GLfloat colors[] = {
 		1.0f, 0.0f, 0.0f,
 		0.0f, 1.0f, 0.0f,
-		0.0f, 0.0f, 1.0f
+		1.0f, 0.0f, 1.0f
 	};
 
 	//VBO - Vertex buffer object
@@ -190,20 +190,19 @@ int main() {
 
 	static const float interleaved[] = {
 		// X Y Z R G B
-		 0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 0.0f,
+		 0.0f, -0.5f, 0.5f, 0.0f, 0.0f, 0.0f,
 		 0.5f, 0.5f, 0.5f, 0.3f, 0.2f, 0.5f,
-		 -0.5f, 0.5f, 0.5f, 1.0f, 1.0f, 0.0f,
-		 -0.5f, -0.5f, 0.5f, 1.0f, 1.0f, 1.0f
+		 1.0f, -0.5f, 0.5f, 1.0f, 1.0f, 0.0f,
 	};
 	VertexBuffer* interleaved_vbo = new VertexBuffer();
-	interleaved_vbo->LoadData(interleaved, 6 * 4);
+	interleaved_vbo->LoadData(interleaved, 6 * 3);
 
 	static const uint16_t indices[] = {
-		3, 0, 1,
-		3, 1, 2
+		2, 0, 
+		1, 2, 
 	};
 	IndexBuffer* interleaved_ibo = new IndexBuffer();
-	interleaved_ibo->LoadData(indices, 3 * 2);
+	interleaved_ibo->LoadData(indices, 2 * 2);
 
 	size_t stride = sizeof(float) * 6;
 	VertexArrayObject* vao2 = new VertexArrayObject();
@@ -215,10 +214,15 @@ int main() {
 
 	// Load our shaders
 
-	Shader* shader = new Shader();
-	shader->LoadShaderPartFromFile("shaders/vertex_shader.glsl", ShaderPartType::Vertex);
-	shader->LoadShaderPartFromFile("shaders/frag_shader.glsl", ShaderPartType::Fragment);
-	shader->Link();
+	Shader* shader1 = new Shader();
+	shader1->LoadShaderPartFromFile("shaders/vertex_shader.glsl", ShaderPartType::Vertex);
+	shader1->LoadShaderPartFromFile("shaders/frag_shader.glsl", ShaderPartType::Fragment);
+	shader1->Link();
+
+	Shader* shader2 = new Shader();
+	shader2->LoadShaderPartFromFile("shaders/vertex_shader.glsl", ShaderPartType::Vertex);
+	shader2->LoadShaderPartFromFile("shaders/frag_shader_2.glsl", ShaderPartType::Fragment);
+	shader2->Link();
 
 	// GL states
 	glEnable(GL_DEPTH_TEST);
@@ -239,10 +243,11 @@ int main() {
 		glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		shader->Bind();
+		shader1->Bind();
 		vao->Bind();
 		glDrawArrays(GL_TRIANGLES, 0, 3);
 
+		shader2->Bind();
 		vao2->Bind();
 		glDrawElements(GL_TRIANGLES, (GLenum)interleaved_ibo->GetElementCount(), (GLenum)interleaved_ibo->GetElementType(), nullptr);
 		VertexArrayObject::Unbind();
@@ -251,7 +256,7 @@ int main() {
 	}
 
 	// Clean up the toolkit logger so we don't leak memory
-	delete shader;
+	delete shader1;
 	delete vao;
 	delete posVbo;
 	delete color_vbo;
