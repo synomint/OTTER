@@ -1,5 +1,6 @@
 #pragma once
 #include "IBuffer.h"
+#include <memory>
 
 /// <summary>
 /// The vertex buffer will store all of our vertex data for rendering
@@ -7,6 +8,12 @@
 class VertexBuffer : public IBuffer
 {
 public:
+	typedef std::shared_ptr<VertexBuffer> Sptr;
+
+	static inline Sptr Create(BufferUsage usage = BufferUsage::StaticDraw) {
+		return std::make_shared<VertexBuffer>(usage);
+	}
+
 	/// <summary>
 	/// Creates a new vertex buffer, with the given usage. Data will still need to be uploaded before it can be used
 	/// </summary>
@@ -18,3 +25,4 @@ public:
 	/// </summary>
 	static void UnBind() { IBuffer::UnBind(BufferType::Vertex); }
 };
+

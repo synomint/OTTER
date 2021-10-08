@@ -4,7 +4,8 @@
 
 VertexArrayObject::VertexArrayObject() :
 	_indexBuffer(nullptr),
-	_handle(0)
+	_handle(0),
+	_vertexBuffers(std::vector<VertexBufferBinding>())
 {
 	glCreateVertexArrays(1, &_handle);
 }
@@ -17,7 +18,7 @@ VertexArrayObject::~VertexArrayObject()
 	}
 }
 
-void VertexArrayObject::SetIndexBuffer(IndexBuffer* ibo) {
+void VertexArrayObject::SetIndexBuffer(const IndexBuffer::Sptr& ibo) {
 	// TODO: What if we already have a buffer? should we delete it? who owns the buffer?
 	_indexBuffer = ibo;
 	Bind();
@@ -26,19 +27,20 @@ void VertexArrayObject::SetIndexBuffer(IndexBuffer* ibo) {
 	Unbind();
 }
 
-void VertexArrayObject::AddVertexBuffer(VertexBuffer* buffer, const std::vector<BufferAttribute>& attributes)
+void VertexArrayObject::AddVertexBuffer(const VertexBuffer::Sptr& buffer, const std::vector<BufferAttribute>& attributes)
 {
 	// TODO: Who should own this buffer now? Do we delete it when we destroy?
 	VertexBufferBinding binding;
 	binding.Buffer = buffer;
 	binding.Attributes = attributes;
 	_vertexBuffers.push_back(binding);
+
 	Bind();
 	buffer->Bind();
 	for (const BufferAttribute& attrib : attributes) {
 		glEnableVertexArrayAttrib(_handle, attrib.Slot);
-		glVertexAttribPointer(attrib.Slot, attrib.Size, (GLenum)attrib.Type, attrib.Normalized, attrib.Stride, 
-			(void*)attrib.Offset);
+		glVertexAttribPointer(attrib.Slot, attrib.Size, (GLenum)attrib.Type, attrib.Normalized, attrib.Stride,
+							  (void*)attrib.Offset);
 	}
 	Unbind();
 }
